@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:snowflake="http://www.mulesoft.org/schema/mule/snowflake" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/snowflake http://www.mulesoft.org/schema/mule/snowflake/current/mule-snowflake.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="140feca4-66d3-4cad-aa9a-bab92b400d50" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="1801665e-b692-41e6-94dc-a7608243e198" >
+		<salesforce:basic-connection username="${sfdc.usernameManufacturing}" password="${sfdc.passwordManufacturing}" />
+	</salesforce:sfdc-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="8ca09f3e-0e99-4bef-b09a-761b135ed08a" file="credentials.properties" />
+	<snowflake:snowflake-config name="Snowflake_Config" doc:name="Snowflake Config" doc:id="c2d1b20c-6b51-4e1b-ac18-6340a98a6c63" >
+		<snowflake:snowflake-connection accountName="${snowflake.accountName}" warehouse="${snowflake.warehouse}" database="${snowflake.database1}" schema="${snowflake.schema}" user="${snowflake.username}" password="${snowflake.password}" role="${snowflake.role}" />
+	</snowflake:snowflake-config>
+	<flow name="sf-snowflake-account-sync" doc:id="a03c0806-7262-48a9-9486-825a438f0b27" >
+		<scheduler doc:name="Scheduler" doc:id="58c57ea4-f783-4df6-adf5-1b7e2773ae1a" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="4" timeUnit="HOURS" />
+			</scheduling-strategy>
+		</scheduler>
+		<logger level="INFO" doc:name="Logger" doc:id="4fdf2ecb-a133-48d2-925d-a1f81e78eeb2" message="===== START" />
+		<salesforce:query doc:name="Query" doc:id="bf2d54c9-3f57-4e22-b954-864d62cf043f" config-ref="Salesforce_Config" >
+			<salesforce:salesforce-query ><![CDATA[SELECT FIELDS(ALL)FROM Account limit 100]]></salesforce:salesforce-query>
+		</salesforce:query>
+		<ee:transform doc:name="Transform Message" doc:id="cf19ffde-1908-4030-8efb-e850579a9fca" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<snowflake:bulk-insert doc:name="Bulk insert" doc:id="5eb264c0-0145-4a6b-af67-33508a0ea657" config-ref="Snowflake_Config" >
+			<snowflake:bulk-input-parameters ><![CDATA[#[%dw 2.0
+output application/json
+---
+payload map ((item, index) -> {
+	ShippingLatitude: item.ShippingLatitude,
+	LastModifiedDate: item.LastModifiedDate,
+	BillingCity: item.BillingCity,
+	JigsawCompanyId: item.JigsawCompanyId,
+	SBQQ__RenewalPricingMethod__c: item.SBQQ__RenewalPricingMethod__c,
+	SLA__c: item.SLA__c,
+	SBQQ__PriceHoldEnd__c: item.SBQQ__PriceHoldEnd__c,
+	'type': item.'type',
+	NaicsCode: item.NaicsCode,
+	Name: item.Name,
+	Industry: item.Industry,
+	CreatedById: item.CreatedById,
+	OperatingHoursId: item.OperatingHoursId,
+	TickerSymbol: item.TickerSymbol,
+	BillingGeocodeAccuracy: item.BillingGeocodeAccuracy,
+	AccountSource: item.AccountSource,
+	BillingPostalCode: item.BillingPostalCode,
+	DandbCompanyId: item.DandbCompanyId,
+	PhotoUrl: item.PhotoUrl,
+	MasterRecordId: item.MasterRecordId,
+	IsDeleted: item.IsDeleted,
+	SBQQ__ContractCoTermination__c: item.SBQQ__ContractCoTermination__c,
+	SBQQ__IgnoreParentContractedPrices__c: item.SBQQ__IgnoreParentContractedPrices__c,
+	LastViewedDate: item.LastViewedDate,
+	ShippingGeocodeAccuracy: item.ShippingGeocodeAccuracy,
+	DunsNumber: item.DunsNumber,
+	Sic: item.Sic,
+	SBQQ__RenewalModel__c: item.SBQQ__RenewalModel__c,
+	ShippingStreet: item.ShippingStreet,
+	CleanStatus: item.CleanStatus,
+	shopify_company_id__c: item.shopify_company_id__c,
+	SBQQ__DefaultOpportunity__c: item.SBQQ__DefaultOpportunity__c,
+	ShippingPostalCode: item.ShippingPostalCode,
+	YearStarted: item.YearStarted,
+	CreatedDate: item.CreatedDate,
+	CustomerPriority__c: item.CustomerPriority__c,
+	ShippingState: item.ShippingState,
+	Id: item.Id,
+	SicDesc: item.SicDesc,
+	BillingState: item.BillingState,
+	AnnualRevenue: item.AnnualRevenue,
+	Jigsaw: item.Jigsaw,
+	Active__c: item.Active__c,
+	Site: item.Site,
+	Ownership: item.Ownership,
+	Description: item.Description,
+	SBQQ__CoTerminationEvent__c: item.SBQQ__CoTerminationEvent__c,
+	Rating: item.Rating,
+	Website: item.Website,
+	LastReferencedDate: item.LastReferencedDate,
+	BillingLatitude: item.BillingLatitude,
+	NumberOfEmployees: item.NumberOfEmployees,
+	SBQQ__CoTermedContractsCombined__c: item.SBQQ__CoTermedContractsCombined__c,
+	OwnerId: item.OwnerId,
+	SLASerialNumber__c: item.SLASerialNumber__c,
+	BillingLongitude: item.BillingLongitude,
+	Tradestyle: item.Tradestyle,
+	Phone: item.Phone,
+	NumberofLocations__c: item.NumberofLocations__c,
+	UpsellOpportunity__c: item.UpsellOpportunity__c,
+	ShippingCountry: item.ShippingCountry,
+	ShippingCity: item.ShippingCity,
+	ParentId: item.ParentId,
+	SBQQ__TaxExempt__c: item.SBQQ__TaxExempt__c,
+	NaicsDesc: item.NaicsDesc,
+	AccountNumber: item.AccountNumber,
+	SystemModstamp: item.SystemModstamp,
+	Type: item.Type,
+	BillingCountry: item.BillingCountry,
+	SLAExpirationDate__c: item.SLAExpirationDate__c,
+	SBQQ__PreserveBundle__c: item.SBQQ__PreserveBundle__c,
+	BillingStreet: item.BillingStreet,
+	ShippingAddress: item.ShippingAddress,
+	LastActivityDate: item.LastActivityDate,
+	Fax: item.Fax,
+	LastModifiedById: item.LastModifiedById,
+	ShippingLongitude: item.ShippingLongitude,
+	SBQQ__AssetQuantitiesCombined__c: item.SBQQ__AssetQuantitiesCombined__c
+} )]]]></snowflake:bulk-input-parameters>
+			<snowflake:sql ><![CDATA[INSERT INTO ACCOUNT ( ShippingLatitude  ,LastModifiedDate  ,BillingCity  ,JigsawCompanyId  ,SBQQ__RenewalPricingMethod__c  ,SLA__c  ,SBQQ__PriceHoldEnd__c    ,NaicsCode  ,Name  ,Industry  ,CreatedById  ,OperatingHoursId  ,TickerSymbol  ,BillingGeocodeAccuracy  ,AccountSource  ,BillingPostalCode  ,DandbCompanyId  ,PhotoUrl  ,MasterRecordId  ,IsDeleted  ,SBQQ__ContractCoTermination__c  ,SBQQ__IgnoreParentContractedPrices__c  ,LastViewedDate  ,ShippingGeocodeAccuracy  ,DunsNumber  ,Sic  ,SBQQ__RenewalModel__c  ,ShippingStreet  ,CleanStatus  ,shopify_company_id__c  ,SBQQ__DefaultOpportunity__c  ,ShippingPostalCode  ,YearStarted  ,CreatedDate  ,CustomerPriority__c  ,ShippingState  ,Id  ,SicDesc  ,BillingState  ,AnnualRevenue  ,Jigsaw  ,Active__c  ,Site  ,Ownership  ,Description  ,SBQQ__CoTerminationEvent__c  ,Rating  ,Website  ,LastReferencedDate  ,BillingLatitude  ,NumberOfEmployees  ,SBQQ__CoTermedContractsCombined__c  ,OwnerId  ,SLASerialNumber__c  ,BillingLongitude  ,Tradestyle  ,Phone  ,NumberofLocations__c  ,UpsellOpportunity__c  ,ShippingCountry  ,ShippingCity  ,ParentId  ,SBQQ__TaxExempt__c  ,NaicsDesc  ,AccountNumber  ,SystemModstamp  ,Type  ,BillingCountry  ,SLAExpirationDate__c  ,SBQQ__PreserveBundle__c  ,BillingStreet    ,LastActivityDate  ,Fax  ,LastModifiedById  ,ShippingLongitude  ,SBQQ__AssetQuantitiesCombined__c ) VALUES(:ShippingLatitude ,:LastModifiedDate ,:BillingCity ,:JigsawCompanyId ,:SBQQ__RenewalPricingMethod__c ,:SLA__c ,:SBQQ__PriceHoldEnd__c,:NaicsCode ,:Name ,:Industry ,:CreatedById ,:OperatingHoursId ,:TickerSymbol ,:BillingGeocodeAccuracy ,:AccountSource ,:BillingPostalCode ,:DandbCompanyId ,:PhotoUrl ,:MasterRecordId ,:IsDeleted ,:SBQQ__ContractCoTermination__c ,:SBQQ__IgnoreParentContractedPrices__c ,:LastViewedDate ,:ShippingGeocodeAccuracy ,:DunsNumber ,:Sic ,:SBQQ__RenewalModel__c ,:ShippingStreet ,:CleanStatus ,:shopify_company_id__c ,:SBQQ__DefaultOpportunity__c ,:ShippingPostalCode ,:YearStarted ,:CreatedDate ,:CustomerPriority__c ,:ShippingState ,:Id ,:SicDesc ,:BillingState ,:AnnualRevenue ,:Jigsaw ,:Active__c ,:Site ,:Ownership ,:Description ,:SBQQ__CoTerminationEvent__c ,:Rating ,:Website ,:LastReferencedDate ,:BillingLatitude ,:NumberOfEmployees ,:SBQQ__CoTermedContractsCombined__c ,:OwnerId ,:SLASerialNumber__c ,:BillingLongitude ,:Tradestyle ,:Phone ,:NumberofLocations__c ,:UpsellOpportunity__c ,:ShippingCountry ,:ShippingCity ,:ParentId ,:SBQQ__TaxExempt__c ,:NaicsDesc ,:AccountNumber ,:SystemModstamp ,:Type ,:BillingCountry ,:SLAExpirationDate__c ,:SBQQ__PreserveBundle__c ,:BillingStreet  ,:LastActivityDate ,:Fax ,:LastModifiedById ,:ShippingLongitude ,:SBQQ__AssetQuantitiesCombined__c )]]></snowflake:sql>
+		</snowflake:bulk-insert>
+		<logger level="INFO" doc:name="Output JSON" doc:id="370a8ca6-6044-4d8d-925d-d2ca70c3e2b8" message="output json --- payload" />
+	</flow>
+</mule>
